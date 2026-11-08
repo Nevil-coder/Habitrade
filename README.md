@@ -45,3 +45,4 @@ The production output is written to `dist/`.
 - Use Settings → Export backup to save a JSON backup. Import it on the same or another browser to restore.
 - Browser reminders are best-effort and require notification permission. They cannot run reliably when the browser is fully closed.
 - If you use a custom domain, add it from the Pages project → Custom domains.
+# Habitrade
