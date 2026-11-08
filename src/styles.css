@@ -591,3 +591,546 @@ button,
     animation: none;
   }
 }
+
+/* =========================================
+   HABITRADE AUTHENTICATION
+========================================= */
+
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 35px 18px 65px;
+  background: #0b0912;
+  color: #f4f0ff;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.auth-glow {
+  position: fixed;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: .2;
+  pointer-events: none;
+}
+
+.auth-glow-one {
+  background: #7939df;
+  top: -200px;
+  right: 5%;
+}
+
+.auth-glow-two {
+  background: #4930a9;
+  bottom: -230px;
+  left: 5%;
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 440px);
+  padding: 38px;
+  border: 1px solid rgba(190,166,255,.17);
+  border-radius: 24px;
+  background: linear-gradient(145deg, #191527, #110e1c);
+  box-shadow: 0 30px 100px #0008;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font: 700 24px 'Space Grotesk', sans-serif;
+  letter-spacing: -1px;
+}
+
+.auth-brand > span > span {
+  color: #a78bfa;
+}
+
+.auth-logo {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: white;
+  background: linear-gradient(145deg, #b18bff, #7041d1);
+  box-shadow: 0 6px 24px #8958e955;
+}
+
+.auth-heading {
+  margin: 38px 0 27px;
+}
+
+.auth-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #b99aff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+}
+
+.auth-heading h1,
+.admin-welcome h1 {
+  margin: 14px 0 9px;
+  font: 600 31px 'Space Grotesk', sans-serif;
+  letter-spacing: -1px;
+}
+
+.auth-heading p,
+.admin-welcome p {
+  margin: 0;
+  color: #a29ab2;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.auth-form {
+  display: grid;
+  gap: 19px;
+}
+
+.auth-label {
+  display: grid;
+  gap: 9px;
+  color: #c7bfd7;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.auth-input-wrap {
+  min-height: 49px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 14px;
+  border: 1px solid rgba(190,166,255,.17);
+  border-radius: 11px;
+  background: #100d1a;
+  color: #9b8cb8;
+  transition: .2s;
+}
+
+.auth-input-wrap:focus-within {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px #a78bfa1c;
+}
+
+.auth-input-wrap input {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f4f0ff;
+  font-size: 13px;
+}
+
+.auth-input-wrap input::placeholder {
+  color: #716980;
+}
+
+.auth-submit {
+  min-height: 49px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid #a98aff;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #a17af3, #7447d1);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 8px 25px #8755df35;
+  transition: .2s;
+}
+
+.auth-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px #8755df55;
+}
+
+.auth-submit:disabled {
+  opacity: .65;
+  cursor: wait;
+  transform: none;
+}
+
+.auth-switch {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 25px;
+  color: #a29ab2;
+  font-size: 11px;
+}
+
+.auth-switch button,
+.auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: #b99aff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.auth-back {
+  justify-content: center;
+  padding: 8px;
+}
+
+.auth-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 28px;
+  padding-top: 19px;
+  border-top: 1px solid rgba(190,166,255,.12);
+  color: #9389a5;
+  font-size: 10px;
+}
+
+.auth-footer svg {
+  color: #34d399;
+}
+
+.auth-alert {
+  margin: 0 0 17px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.auth-alert.error {
+  border: 1px solid #fb718544;
+  background: #fb718510;
+  color: #fda4af;
+}
+
+.auth-alert.success {
+  border: 1px solid #34d39944;
+  background: #34d39910;
+  color: #6ee7b7;
+}
+
+.auth-bottom {
+  position: absolute;
+  bottom: 20px;
+  color: #716980;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.auth-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  background: #0b0912;
+  color: #b99aff;
+  font-size: 12px;
+}
+
+.auth-spinner {
+  animation: auth-spin 1s linear infinite;
+}
+
+@keyframes auth-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* =========================================
+   USER SESSION BAR
+========================================= */
+
+.authenticated-app {
+  min-height: 100vh;
+}
+
+.user-session-bar {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 24px;
+  background: #100e19;
+  border-bottom: 1px solid rgba(190,166,255,.12);
+  color: #f4f0ff;
+}
+
+.session-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.session-avatar {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a78bfa, #6740c6);
+  color: white;
+  font-weight: 700;
+}
+
+.session-user strong,
+.session-user small,
+.admin-account strong,
+.admin-account small {
+  display: block;
+}
+
+.session-user strong,
+.admin-account strong {
+  font-size: 11px;
+}
+
+.session-user small,
+.admin-account small {
+  margin-top: 3px;
+  color: #918aa6;
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+.session-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid rgba(190,166,255,.17);
+  border-radius: 9px;
+  background: #1b1829;
+  color: #d9d0e8;
+  font-size: 11px;
+}
+
+/* =========================================
+   ADMIN DASHBOARD
+========================================= */
+
+.admin-page {
+  min-height: 100vh;
+  background: #0b0912;
+  color: #f4f0ff;
+}
+
+.admin-topbar {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 5%;
+  border-bottom: 1px solid rgba(190,166,255,.12);
+  background: #100e19;
+}
+
+.admin-tag {
+  padding: 5px 8px;
+  border: 1px solid #a78bfa44;
+  border-radius: 6px;
+  background: #a78bfa15;
+  color: #c4a6ff;
+  font: 700 9px 'DM Sans', sans-serif;
+  letter-spacing: 1px;
+}
+
+.admin-account {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-content {
+  width: min(1200px, 92%);
+  margin: 0 auto;
+  padding: 48px 0;
+}
+
+.admin-welcome {
+  margin-bottom: 28px;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.admin-stat {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+  border: 1px solid rgba(190,166,255,.13);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #191527, #14111f);
+}
+
+.admin-stat-icon {
+  color: #b99aff;
+}
+
+.admin-stat > span {
+  color: #a29ab2;
+  font-size: 11px;
+}
+
+.admin-stat > strong {
+  font: 600 30px 'Space Grotesk', sans-serif;
+}
+
+.admin-users-panel {
+  padding: 22px;
+  border: 1px solid rgba(190,166,255,.13);
+  border-radius: 17px;
+  background: #151321;
+}
+
+.admin-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.admin-panel-heading h2 {
+  margin: 0 0 6px;
+  font: 600 18px 'Space Grotesk', sans-serif;
+}
+
+.admin-panel-heading p {
+  margin: 0;
+  color: #918aa6;
+  font-size: 11px;
+}
+
+.admin-refresh {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid rgba(190,166,255,.17);
+  border-radius: 9px;
+  background: #1b1829;
+  color: #c4a6ff;
+  font-size: 10px;
+}
+
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-table th {
+  padding: 13px 12px;
+  color: #918aa6;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.admin-table td {
+  padding: 15px 12px;
+  border-top: 1px solid rgba(190,166,255,.1);
+  color: #e6dff2;
+  font-size: 11px;
+}
+
+.role-pill {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: #60a5fa18;
+  color: #93c5fd;
+  font-size: 9px;
+  text-transform: capitalize;
+}
+
+.role-pill.admin {
+  background: #a78bfa20;
+  color: #c4a6ff;
+}
+
+.admin-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 130px;
+  color: #a29ab2;
+  font-size: 11px;
+}
+
+@media(max-width:700px) {
+  .auth-card {
+    padding: 27px 22px;
+  }
+
+  .auth-heading h1 {
+    font-size: 27px;
+  }
+
+  .user-session-bar {
+    padding: 8px 13px;
+  }
+
+  .admin-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 15px;
+  }
+
+  .admin-account {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-content {
+    padding: 30px 0;
+  }
+
+  .admin-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-users-panel {
+    padding: 14px;
+  }
+}
