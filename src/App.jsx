@@ -1,6 +1,5 @@
-
-import React, { useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
   Activity,
   ArrowRight,
@@ -8,17 +7,20 @@ import {
   ShieldCheck,
   UserRound,
   Mail,
-  LockKeyhole,
   RefreshCw,
   LogOut,
   Users,
   UserCheck,
   UserX,
   LoaderCircle,
-  Sparkles
+  Search,
+  X,
+  Check,
+  Flame
 } from 'lucide-react'
 
 import Workspace from './Workspace'
+import { CountUp, FxContext, Logo, Wordmark } from './ui'
 import {
   registerUser,
   verifyRegistration,
@@ -26,12 +28,130 @@ import {
   verifyLogin,
   getCurrentUser,
   logoutUser,
-  getAdminUsers
+  getAdminUsers,
+  getAdminUserDetails,
+  updateAdminUserStatus
 } from './api'
 
 import './styles.css'
 
+const ease = [0.22, 1, 0.36, 1]
+
+/* =========================================
+   SIX-BOX CODE INPUT
+========================================= */
+
+function OtpInput({ value, onChange, disabled }) {
+  const refs = useRef([])
+  const digits = Array.from({ length: 6 }, (_, i) => value[i] || '')
+
+  const focusAt = index => {
+    const node = refs.current[Math.max(0, Math.min(5, index))]
+    if (node) node.focus()
+  }
+
+  const handleInput = (index, raw) => {
+    const typed = raw.replace(/\D/g, '')
+    if (!typed) return
+    const next = (value.slice(0, index) + typed).slice(0, 6)
+    onChange(next)
+    focusAt(next.length >= 6 ? 5 : next.length)
+  }
+
+  const handleKeyDown = (index, event) => {
+    if (event.key === 'Backspace') {
+      event.preventDefault()
+      const target = digits[index] ? index : Math.max(0, index - 1)
+      onChange(value.slice(0, target))
+      focusAt(target)
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      focusAt(index - 1)
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      focusAt(index + 1)
+    }
+  }
+
+  const handlePaste = event => {
+    const pasted = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (!pasted) return
+    event.preventDefault()
+    onChange(pasted)
+    focusAt(pasted.length >= 6 ? 5 : pasted.length)
+  }
+
+  return (
+    <div className="otp" onPaste={handlePaste} role="group" aria-label="Six-digit verification code">
+      {digits.map((digit, index) => (
+        <input
+          key={index}
+          ref={node => (refs.current[index] = node)}
+          className={`otp-box ${digit ? 'filled' : ''}`}
+          type="text"
+          inputMode="numeric"
+          autoComplete={index === 0 ? 'one-time-code' : 'off'}
+          aria-label={`Digit ${index + 1}`}
+          value={digit}
+          disabled={disabled}
+          autoFocus={index === 0}
+          onFocus={event => event.target.select()}
+          onChange={event => handleInput(index, event.target.value)}
+          onKeyDown={event => handleKeyDown(index, event)}
+        />
+      ))}
+    </div>
+  )
+}
+
+/* =========================================
+   AUTH SHOWCASE (decorative)
+========================================= */
+
+function Showcase() {
+  const cells = useMemo(() => Array.from({ length: 35 }, (_, i) => i), [])
+
+  return (
+    <aside className="showcase" aria-hidden="true">
+      <div className="showcase-brand">
+        <Logo size={38} />
+        <Wordmark />
+      </div>
+
+      <div className="showcase-body">
+        <h2>
+          Small things, done daily,
+          <br />
+          add up to a different you.
+        </h2>
+
+        <div className="streak-grid">
+          {cells.map(i => (
+            <i key={i} style={{ '--i': i, '--hue': i % 5 === 0 ? 'var(--warm)' : i % 3 === 0 ? 'var(--accent)' : 'var(--good)' }} />
+          ))}
+        </div>
+
+        <div className="float-chip chip-a">
+          <span className="chip-check"><Check size={13} strokeWidth={3} /></span>
+          Morning workout
+        </div>
+        <div className="float-chip chip-b">
+          <Flame size={15} />
+          12 day streak
+        </div>
+      </div>
+
+      <p className="showcase-foot">Your routine. Your progress.</p>
+    </aside>
+  )
+}
+
+/* =========================================
+   APP
+========================================= */
+
 function App() {
+  const reduceMotion = useReducedMotion()
   const [user, setUser] = useState(null)
   const [checking, setChecking] = useState(true)
   const [screen, setScreen] = useState('login')
@@ -39,6 +159,7 @@ function App() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const [cooldown, setCooldown] = useState(0)
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -72,9 +193,23 @@ function App() {
     }
   }, [])
 
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const timer = window.setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => window.clearTimeout(timer)
+  }, [cooldown])
+
   function resetMessages() {
     setError('')
     setMessage('')
+  }
+
+  async function sendCode() {
+    if (authMode === 'register') {
+      await registerUser(name.trim(), email.trim())
+    } else {
+      await loginUser(email.trim())
+    }
   }
 
   async function handleSendCode(event) {
@@ -83,14 +218,27 @@ function App() {
     setBusy(true)
 
     try {
-      if (authMode === 'register') {
-        await registerUser(name.trim(), email.trim())
-      } else {
-        await loginUser(email.trim())
-      }
-
+      await sendCode()
       setScreen('otp')
-      setMessage('A six-digit verification code has been sent to your email.')
+      setCooldown(30)
+      setMessage('We sent a six-digit code to your email.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleResend() {
+    if (cooldown > 0 || busy) return
+    resetMessages()
+    setBusy(true)
+
+    try {
+      await sendCode()
+      setCooldown(30)
+      setOtp('')
+      setMessage('A new code is on its way.')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -110,9 +258,10 @@ function App() {
     setBusy(true)
 
     try {
-      const result = authMode === 'register'
-        ? await verifyRegistration(email.trim(), otp)
-        : await verifyLogin(email.trim(), otp)
+      const result =
+        authMode === 'register'
+          ? await verifyRegistration(email.trim(), otp)
+          : await verifyLogin(email.trim(), otp)
 
       setUser(result.user)
     } catch (err) {
@@ -123,7 +272,11 @@ function App() {
   }
 
   async function handleLogout() {
-    await logoutUser()
+    try {
+      await logoutUser()
+    } catch {
+      /* token is cleared in finally; continue signing out locally */
+    }
     setUser(null)
     setScreen('login')
     setAuthMode('login')
@@ -133,205 +286,221 @@ function App() {
     resetMessages()
   }
 
+  const fx = { reduced: !!reduceMotion, level: reduceMotion ? 'reduced' : 'maximum' }
+
   if (checking) {
     return (
-      <div className="auth-loading">
-        <LoaderCircle className="auth-spinner" size={34} />
-        <span>Checking your Habitrade session...</span>
-      </div>
+      <FxContext.Provider value={fx}>
+        <div className="boot" role="status">
+          <Logo size={56} draw />
+          <span>Checking your session…</span>
+        </div>
+      </FxContext.Provider>
     )
   }
 
   if (user) {
     if (user.role === 'admin') {
-      return <AdminDashboard user={user} onLogout={handleLogout} />
+      return (
+        <FxContext.Provider value={fx}>
+          <AdminDashboard user={user} onLogout={handleLogout} />
+        </FxContext.Provider>
+      )
     }
 
-    return (
-      <div className="authenticated-app">
-        <div className="user-session-bar">
-          <div className="session-user">
-            <span className="session-avatar">
-              {user.name?.charAt(0)?.toUpperCase() || 'U'}
-            </span>
-            <span>
-              <strong>{user.name}</strong>
-              <small>{user.email}</small>
-            </span>
-          </div>
-
-          <button className="session-logout" onClick={handleLogout}>
-            <LogOut size={16} />
-            <span>Logout</span>
-          </button>
-        </div>
-
-        <Workspace />
-      </div>
-    )
+    return <Workspace user={user} onLogout={handleLogout} />
   }
 
+  const headings = {
+    otp: ['Check your inbox', `Enter the code we sent to ${email}.`],
+    register: ['Create your account', 'Start building habits that last.'],
+    login: ['Welcome back', 'Sign in to pick up where you left off.']
+  }
+  const [title, subtitle] = headings[screen === 'otp' ? 'otp' : authMode]
+
   return (
-    <main className="auth-page">
-      <div className="auth-glow auth-glow-one" />
-      <div className="auth-glow auth-glow-two" />
+    <FxContext.Provider value={fx}>
+      <main className="auth-page">
+        <Showcase />
 
-      <motion.section
-        className="auth-card"
-        initial={{ opacity: 0, y: 28, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="auth-brand">
-          <div className="auth-logo">
-            <Activity size={25} />
-          </div>
-          <span>habit<span>rade</span></span>
-        </div>
+        <section className="auth-panel">
+          <motion.div
+            className="auth-card"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease }}
+          >
+            <div className="auth-brand-mobile">
+              <Logo size={34} />
+              <Wordmark />
+            </div>
 
-        <div className="auth-heading">
-          <div className="auth-eyebrow">
-            <Sparkles size={13} />
-            BUILD BETTER. BECOME BETTER.
-          </div>
-
-          <h1>
-            {screen === 'otp'
-              ? 'Check your inbox'
-              : authMode === 'register'
-                ? 'Create your account'
-                : 'Welcome back'}
-          </h1>
-
-          <p>
-            {screen === 'otp'
-              ? `Enter the verification code sent to ${email}`
-              : authMode === 'register'
-                ? 'Start building better habits with Habitrade.'
-                : 'Sign in to continue your personal growth journey.'}
-          </p>
-        </div>
-
-        {error && <div className="auth-alert error">{error}</div>}
-        {message && <div className="auth-alert success">{message}</div>}
-
-        {screen === 'otp' ? (
-          <form className="auth-form" onSubmit={handleVerify}>
-            <label className="auth-label">
-              Verification code
-              <div className="auth-input-wrap">
-                <LockKeyhole size={18} />
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  placeholder="000000"
-                  value={otp}
-                  onChange={e =>
-                    setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
-                  }
-                  required
-                />
-              </div>
-            </label>
-
-            <button className="auth-submit" disabled={busy}>
-              {busy ? 'Verifying...' : 'Verify and continue'}
-              {busy ? <LoaderCircle className="auth-spinner" /> : <ArrowRight />}
-            </button>
-
-            <button
-              type="button"
-              className="auth-back"
-              onClick={() => {
-                setScreen('login')
-                setOtp('')
-                resetMessages()
-              }}
-            >
-              <ArrowLeft size={15} /> Change email or go back
-            </button>
-          </form>
-        ) : (
-          <form className="auth-form" onSubmit={handleSendCode}>
-            {authMode === 'register' && (
-              <label className="auth-label">
-                Full name
-                <div className="auth-input-wrap">
-                  <UserRound size={18} />
-                  <input
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Enter your name"
-                    maxLength={80}
-                    required
-                  />
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={`${screen}-${authMode}`}
+                initial={{ opacity: 0, x: 22 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -22 }}
+                transition={{ duration: 0.28, ease }}
+              >
+                <div className="auth-heading">
+                  <h1>{title}</h1>
+                  <p>{subtitle}</p>
                 </div>
-              </label>
-            )}
 
-            <label className="auth-label">
-              Email address
-              <div className="auth-input-wrap">
-                <Mail size={18} />
-                <input
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                />
-              </div>
-            </label>
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      key="e"
+                      className="auth-alert error"
+                      role="alert"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+                  {message && !error && (
+                    <motion.div
+                      key="m"
+                      className="auth-alert success"
+                      role="status"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      {message}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-            <button className="auth-submit" disabled={busy}>
-              {busy ? 'Please wait...' : 'Continue with email'}
-              {busy ? <LoaderCircle className="auth-spinner" /> : <ArrowRight />}
-            </button>
-          </form>
-        )}
+                {screen === 'otp' ? (
+                  <form className="auth-form" onSubmit={handleVerify}>
+                    <OtpInput value={otp} onChange={setOtp} disabled={busy} />
 
-        {screen !== 'otp' && (
-          <div className="auth-switch">
-            {authMode === 'login'
-              ? "Don't have an account?"
-              : 'Already have an account?'}
+                    <button className="auth-submit" disabled={busy || otp.length < 6}>
+                      {busy ? 'Verifying…' : 'Verify and continue'}
+                      {busy ? <LoaderCircle className="spin" size={18} /> : <ArrowRight size={18} />}
+                    </button>
 
-            <button
-              onClick={() => {
-                setAuthMode(authMode === 'login' ? 'register' : 'login')
-                resetMessages()
-              }}
-            >
-              {authMode === 'login' ? 'Create account' : 'Sign in'}
-            </button>
+                    <div className="otp-actions">
+                      <button
+                        type="button"
+                        className="auth-back"
+                        onClick={() => {
+                          setScreen('login')
+                          setOtp('')
+                          resetMessages()
+                        }}
+                      >
+                        <ArrowLeft size={15} /> Change email
+                      </button>
+
+                      <button
+                        type="button"
+                        className="auth-back"
+                        disabled={cooldown > 0 || busy}
+                        onClick={handleResend}
+                      >
+                        {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <form className="auth-form" onSubmit={handleSendCode}>
+                    {authMode === 'register' && (
+                      <label className="auth-label">
+                        Full name
+                        <div className="auth-input-wrap">
+                          <UserRound size={18} />
+                          <input
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            placeholder="Your name"
+                            maxLength={80}
+                            autoComplete="name"
+                            required
+                          />
+                        </div>
+                      </label>
+                    )}
+
+                    <label className="auth-label">
+                      Email address
+                      <div className="auth-input-wrap">
+                        <Mail size={18} />
+                        <input
+                          type="email"
+                          autoComplete="email"
+                          value={email}
+                          onChange={e => setEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          required
+                        />
+                      </div>
+                    </label>
+
+                    <button className="auth-submit" disabled={busy}>
+                      {busy ? 'Sending code…' : 'Continue with email'}
+                      {busy ? <LoaderCircle className="spin" size={18} /> : <ArrowRight size={18} />}
+                    </button>
+                  </form>
+                )}
+
+                {screen !== 'otp' && (
+                  <div className="auth-switch">
+                    {authMode === 'login' ? "New to Habitrade?" : 'Already have an account?'}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode(authMode === 'login' ? 'register' : 'login')
+                        resetMessages()
+                      }}
+                    >
+                      {authMode === 'login' ? 'Create account' : 'Sign in'}
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="auth-footer">
+              <ShieldCheck size={14} />
+              Secure email verification. No password to remember.
+            </div>
+          </motion.div>
+
+          <div className="auth-bottom">
+            <span>Created by Neville P</span>
+            <a className="footer-email" href="mailto:mytechgamer02@gmail.com">
+              mytechgamer02@gmail.com
+            </a>
           </div>
-        )}
-
-        <div className="auth-footer">
-          <ShieldCheck size={14} />
-          Secure email verification
-        </div>
-      </motion.section>
-
-      <div className="auth-bottom">
-        HABITRADE · YOUR ROUTINE. YOUR PROGRESS.
-      </div>
-    </main>
+        </section>
+      </main>
+    </FxContext.Provider>
   )
 }
+
+/* =========================================
+   ADMIN
+========================================= */
 
 function AdminDashboard({ user, onLogout }) {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState(null)
+  const [details, setDetails] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
+  const [savingStatus, setSavingStatus] = useState(false)
 
   async function loadUsers() {
     setLoading(true)
     setError('')
-
     try {
       const result = await getAdminUsers()
       setUsers(result.users || [])
@@ -342,20 +511,69 @@ function AdminDashboard({ user, onLogout }) {
     }
   }
 
+  async function openUser(account) {
+    setSelected(account)
+    setDetails(null)
+    setDetailError('')
+    setDetailLoading(true)
+    try {
+      setDetails(await getAdminUserDetails(account.id))
+    } catch (err) {
+      setDetailError(err.message)
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  async function changeStatus(account) {
+    const status = account.status === 'active' ? 'suspended' : 'active'
+    setSavingStatus(true)
+    try {
+      await updateAdminUserStatus(account.id, status)
+      setUsers(previous => previous.map(u => (u.id === account.id ? { ...u, status } : u)))
+      if (selected?.id === account.id) setSelected({ ...account, status })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingStatus(false)
+    }
+  }
+
+  function closeDetail() {
+    setSelected(null)
+    setDetails(null)
+  }
+
   useEffect(() => {
     loadUsers()
   }, [])
 
+  useEffect(() => {
+    const onKey = event => event.key === 'Escape' && closeDetail()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const activeUsers = users.filter(u => u.status === 'active').length
+  const suspendedUsers = users.filter(u => u.status && u.status !== 'active').length
   const admins = users.filter(u => u.role === 'admin').length
+
+  const visible = users.filter(u => {
+    const q = search.trim().toLowerCase()
+    return !q || `${u.name} ${u.email}`.toLowerCase().includes(q)
+  })
+
+  const detailUser = details?.user || details?.account || selected
+  const detailHabits = details?.habits || details?.data?.habits || []
+  const detailLogs = details?.logs || details?.habit_logs || details?.data?.logs || []
 
   return (
     <main className="admin-page">
       <header className="admin-topbar">
-        <div className="auth-brand">
-          <div className="auth-logo"><Activity size={24} /></div>
-          <span>habit<span>rade</span></span>
-          <span className="admin-tag">ADMIN</span>
+        <div className="admin-brand">
+          <Logo size={34} />
+          <Wordmark />
+          <span className="admin-tag">Admin</span>
         </div>
 
         <div className="admin-account">
@@ -363,49 +581,59 @@ function AdminDashboard({ user, onLogout }) {
             <strong>{user.name}</strong>
             <small>{user.email}</small>
           </div>
-          <button className="session-logout" onClick={onLogout}>
-            <LogOut size={16} /> Logout
+          <button className="btn ghost" onClick={onLogout}>
+            <LogOut size={16} /> Log out
           </button>
         </div>
       </header>
 
       <section className="admin-content">
         <div className="admin-welcome">
-          <div className="auth-eyebrow"><ShieldCheck size={14} /> ADMINISTRATION</div>
           <h1>Admin dashboard</h1>
-          <p>Manage Habitrade accounts and monitor platform access.</p>
+          <p>Manage accounts and review each person's habit tracking.</p>
         </div>
 
         <div className="admin-stats">
-          <AdminStat icon={<Users />} label="Registered users" value={users.length} />
-          <AdminStat icon={<UserCheck />} label="Active accounts" value={activeUsers} />
-          <AdminStat icon={<ShieldCheck />} label="Administrators" value={admins} />
+          <AdminStat icon={<Users size={20} />} label="Registered users" value={users.length} />
+          <AdminStat icon={<UserCheck size={20} />} label="Active accounts" value={activeUsers} tone="good" />
+          <AdminStat icon={<UserX size={20} />} label="Suspended" value={suspendedUsers} tone="bad" />
+          <AdminStat icon={<ShieldCheck size={20} />} label="Administrators" value={admins} tone="accent" />
         </div>
 
-        <section className="admin-users-panel">
-          <div className="admin-panel-heading">
+        <section className="panel admin-panel">
+          <div className="panel-head">
             <div>
               <h2>User management</h2>
-              <p>Accounts registered in Habitrade</p>
+              <p>Select a person to see their habits and history.</p>
             </div>
 
-            <button className="admin-refresh" onClick={loadUsers}>
-              <RefreshCw size={15} /> Refresh
-            </button>
+            <div className="admin-tools">
+              <div className="search-box">
+                <Search size={16} />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search name or email"
+                  aria-label="Search users"
+                />
+              </div>
+              <button className="btn ghost" onClick={loadUsers} disabled={loading}>
+                <RefreshCw size={15} className={loading ? 'spin' : ''} /> Refresh
+              </button>
+            </div>
           </div>
 
           {loading ? (
             <div className="admin-empty">
-              <LoaderCircle className="auth-spinner" />
-              Loading users...
+              <LoaderCircle className="spin" size={20} /> Loading users…
             </div>
           ) : error ? (
             <div className="auth-alert error">{error}</div>
-          ) : users.length === 0 ? (
-            <div className="admin-empty">No registered users found.</div>
+          ) : visible.length === 0 ? (
+            <div className="admin-empty">{users.length ? 'No users match your search.' : 'No registered users yet.'}</div>
           ) : (
-            <div className="admin-table-wrap">
-              <table className="admin-table">
+            <div className="table-wrap">
+              <table className="data-table">
                 <thead>
                   <tr>
                     <th>User</th>
@@ -413,20 +641,27 @@ function AdminDashboard({ user, onLogout }) {
                     <th>Role</th>
                     <th>Status</th>
                     <th>Verified</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map(account => (
-                    <tr key={account.id}>
-                      <td>{account.name}</td>
-                      <td>{account.email}</td>
+                  {visible.map((account, i) => (
+                    <tr key={account.id} className="row-in" style={{ '--i': Math.min(i, 12) }}>
                       <td>
-                        <span className={`role-pill ${account.role}`}>
-                          {account.role}
+                        <span className="user-cell">
+                          <span className="mini-avatar">{account.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+                          {account.name}
                         </span>
                       </td>
-                      <td>{account.status}</td>
+                      <td>{account.email}</td>
+                      <td><span className={`pill role-${account.role}`}>{account.role}</span></td>
+                      <td><span className={`pill status-${account.status}`}>{account.status}</span></td>
                       <td>{account.email_verified ? 'Yes' : 'No'}</td>
+                      <td className="right">
+                        <button className="btn ghost small" onClick={() => openUser(account)}>
+                          View
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -435,16 +670,136 @@ function AdminDashboard({ user, onLogout }) {
           )}
         </section>
       </section>
+
+      <AnimatePresence>
+        {selected && (
+          <>
+            <motion.div
+              className="drawer-scrim"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeDetail}
+            />
+            <motion.aside
+              className="drawer"
+              role="dialog"
+              aria-label={`Tracking for ${selected.name}`}
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 280, damping: 32 }}
+            >
+              <div className="drawer-head">
+                <div>
+                  <h2>{selected.name}</h2>
+                  <p>{selected.email}</p>
+                </div>
+                <button className="icon-button" onClick={closeDetail} aria-label="Close">
+                  <X size={18} />
+                </button>
+              </div>
+
+              {detailLoading ? (
+                <div className="admin-empty">
+                  <LoaderCircle className="spin" size={20} /> Loading tracking…
+                </div>
+              ) : detailError ? (
+                <div className="auth-alert error">{detailError}</div>
+              ) : (
+                <>
+                  <div className="drawer-stats">
+                    <AdminStat icon={<Activity size={18} />} label="Tracked habits" value={detailHabits.length} />
+                    <AdminStat
+                      icon={<UserCheck size={18} />}
+                      label="Completion records"
+                      value={detailLogs.length || detailHabits.reduce((n, h) => n + (h.completions?.length || 0), 0)}
+                    />
+                    <AdminStat
+                      icon={<ShieldCheck size={18} />}
+                      label="Account status"
+                      value={detailUser?.status || selected.status}
+                      text
+                    />
+                  </div>
+
+                  <button
+                    className={`btn ${selected.status === 'active' ? 'danger' : 'primary'}`}
+                    disabled={savingStatus}
+                    onClick={() => changeStatus(selected)}
+                  >
+                    {savingStatus ? 'Updating…' : selected.status === 'active' ? 'Suspend account' : 'Activate account'}
+                  </button>
+
+                  <h3>Habits</h3>
+                  {detailHabits.length ? (
+                    <div className="table-wrap">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Habit</th>
+                            <th>Schedule</th>
+                            <th>Done</th>
+                            <th>Created</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detailHabits.map(h => (
+                            <tr key={h.id}>
+                              <td>{h.name}</td>
+                              <td>{Array.isArray(h.schedule) ? h.schedule.join(', ') : h.schedule_json || '—'}</td>
+                              <td>{h.completions?.length ?? h.completion_count ?? '—'}</td>
+                              <td>{h.created_at ? new Date(h.created_at).toLocaleDateString() : '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="admin-empty">This person hasn't created any habits yet.</div>
+                  )}
+
+                  {detailLogs.length > 0 && (
+                    <>
+                      <h3>Recent completions</h3>
+                      <div className="table-wrap">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Habit</th>
+                              <th>Date</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detailLogs.slice(0, 100).map((log, i) => (
+                              <tr key={log.id || i}>
+                                <td>{log.habit_name || log.name || log.habit_id}</td>
+                                <td>{log.completion_date || log.date || '—'}</td>
+                                <td>{log.completed === false ? 'Not completed' : 'Completed'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </main>
   )
 }
 
-function AdminStat({ icon, label, value }) {
+function AdminStat({ icon, label, value, tone = '', text = false }) {
   return (
-    <article className="admin-stat">
+    <article className={`admin-stat ${tone}`}>
       <div className="admin-stat-icon">{icon}</div>
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong>{text || typeof value !== 'number' ? value : <CountUp value={value} />}</strong>
     </article>
   )
 }
